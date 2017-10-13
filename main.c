@@ -41,10 +41,17 @@ typedef enum {
     FILE_NODE
 } NODE_TYPE;
 
+int current_layer = 0;
+
 void print_file_hash(file_node file_node) {
     for(int j = 0; j < file_node.hash_size; j++) {
         printf("%02x", file_node.hash[j]);
     }
+}
+
+void print_tabs() {
+    for(int i = 0; i < current_layer; i++)
+        printf("\t");
 }
 
 dir_node read_next_dir_node(FILE *file) {
@@ -115,7 +122,7 @@ NODE_TYPE read_next_node_type(FILE *file) {
 
     dir_node dir_node = read_next_dir_node(file);
 
-    if(memcmp(dir_identifier, dir_node.u_seq, 15) == 0) {
+    if(memcmp(dir_identifier, dir_node.u_seq, 14) == 0) {
         type = DIR_NODE;
     } else {
         type = FILE_NODE;
@@ -131,12 +138,16 @@ void traverse_directory(dir_node directory, FILE *file) {
     for(int i = 0; i < directory.number_of_nodes; i++) {
         NODE_TYPE next_type = read_next_node_type(file);
         if(next_type == DIR_NODE) {
+            print_tabs();
             dir_node dir_node = read_next_dir_node(file);
-            printf("Got directory %s (%s)\n", dir_node.word1, dir_node.word2);
+            printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, dir_node.number_of_nodes);
+            current_layer++;
             traverse_directory(dir_node, file);
+            current_layer--;
         } else {
             file_node file_node = read_next_file_node(file);
-            printf("Got file %s (%s) (", file_node.word1, file_node.word2);
+            print_tabs();
+            printf("--f %s (%s) (", file_node.word1, file_node.word2);
             print_file_hash(file_node);
             printf(")\n");
         }
@@ -167,13 +178,18 @@ int main(int argc, char *argv[]) {
         NODE_TYPE next_type = read_next_node_type(file);
         if(next_type == DIR_NODE) {
             dir_node dir_node = read_next_dir_node(file);
-            printf("Got directory %s (%s)\n", dir_node.word1, dir_node.word2);
+            print_tabs();
+            printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, dir_node.number_of_nodes);
+            current_layer++;
             traverse_directory(dir_node, file);
+            current_layer--;
         } else {
             file_node file_node = read_next_file_node(file);
-            printf("Got file %s (%s) (", file_node.word1, file_node.word2);
+            print_tabs();
+            printf("--f %s (%s) (", file_node.word1, file_node.word2);
             print_file_hash(file_node);
-            printf(")\n");        }
+            printf(")\n");
+        }
     }
 
     fclose(file);
