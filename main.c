@@ -22,16 +22,16 @@ typedef struct {
 typedef struct {
     unsigned char word1_size, word2_size;
     char *word1, *word2;
-    unsigned char u_seq[15];
-    unsigned char number_of_nodes;
+    unsigned char u_seq[14];
+    unsigned char number_of_nodes[2];
     unsigned char u_flag;
 } dir_node;
 
 typedef struct {
     unsigned char magic_number[3];
     unsigned char u_seq[4];
-    unsigned char u_seq1[32];
-    unsigned char number_of_nodes;
+    unsigned char u_seq1[31];
+    unsigned char number_of_nodes[2];
     unsigned char u_flag;
 } root_node;
 
@@ -54,6 +54,10 @@ void print_tabs() {
         printf("\t");
 }
 
+int two_char_to_int(const unsigned char chars[2]) {
+    return chars[0] << 8 | chars[1];
+}
+
 dir_node read_next_dir_node(FILE *file) {
     dir_node _dir_node;
 
@@ -66,11 +70,11 @@ dir_node read_next_dir_node(FILE *file) {
     fread(&_dir_node.word2_size, sizeof(unsigned char), 1, file);
     _dir_node.word2_size++;
 
-    _dir_node.word2 = malloc(_dir_node.word1_size * sizeof(char));
+    _dir_node.word2 = malloc(_dir_node.word2_size * sizeof(char));
     fread(_dir_node.word2, sizeof(char), _dir_node.word2_size, file);
 
-    fread(_dir_node.u_seq, sizeof(unsigned char), 15, file);
-    fread(&_dir_node.number_of_nodes, sizeof(unsigned char), 1, file);
+    fread(_dir_node.u_seq, sizeof(unsigned char), 14, file);
+    fread(&_dir_node.number_of_nodes, sizeof(unsigned char), 2, file);
     fread(&_dir_node.u_flag, sizeof(unsigned char), 1, file);
 
     return _dir_node;
@@ -135,12 +139,12 @@ NODE_TYPE read_next_node_type(FILE *file) {
 }
 
 void traverse_directory(dir_node directory, FILE *file) {
-    for(int i = 0; i < directory.number_of_nodes; i++) {
+    for(int i = 0; i < two_char_to_int(directory.number_of_nodes); i++) {
         NODE_TYPE next_type = read_next_node_type(file);
         if(next_type == DIR_NODE) {
             print_tabs();
             dir_node dir_node = read_next_dir_node(file);
-            printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, dir_node.number_of_nodes);
+            printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, two_char_to_int(dir_node.number_of_nodes));
             current_layer++;
             traverse_directory(dir_node, file);
             current_layer--;
@@ -157,6 +161,9 @@ void traverse_directory(dir_node directory, FILE *file) {
 int main(int argc, char *argv[]) {
 
     if(argc < 2) {
+        unsigned  char test[2] = {0x01, 0x62};
+        printf("%d", two_char_to_int(test));
+
         printf("Usage : %s {file_path}\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -172,14 +179,14 @@ int main(int argc, char *argv[]) {
 
     fread(&header, sizeof(root_node), 1, file);
 
-    printf("Number of nodes in root : %d\n", header.number_of_nodes);
+    printf("Number of nodes in root : %d\n", two_char_to_int(header.number_of_nodes));
 
-    for(int i = 0; i < header.number_of_nodes; i++) {
+    for(int i = 0; i < two_char_to_int(header.number_of_nodes); i++) {
         NODE_TYPE next_type = read_next_node_type(file);
         if(next_type == DIR_NODE) {
             dir_node dir_node = read_next_dir_node(file);
             print_tabs();
-            printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, dir_node.number_of_nodes);
+            printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, two_char_to_int(dir_node.number_of_nodes));
             current_layer++;
             traverse_directory(dir_node, file);
             current_layer--;
