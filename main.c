@@ -43,6 +43,8 @@ typedef enum {
 
 int current_layer = 0;
 
+void process_node(FILE *file) ;
+
 void print_file_hash(file_node file_node) {
     for(int j = 0; j < file_node.hash_size; j++) {
         printf("%02x", file_node.hash[j]);
@@ -140,30 +142,31 @@ NODE_TYPE read_next_node_type(FILE *file) {
 
 void traverse_directory(dir_node directory, FILE *file) {
     for(int i = 0; i < two_char_to_int(directory.number_of_nodes); i++) {
-        NODE_TYPE next_type = read_next_node_type(file);
-        if(next_type == DIR_NODE) {
-            print_tabs();
-            dir_node dir_node = read_next_dir_node(file);
-            printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, two_char_to_int(dir_node.number_of_nodes));
-            current_layer++;
-            traverse_directory(dir_node, file);
-            current_layer--;
-        } else {
-            file_node file_node = read_next_file_node(file);
-            print_tabs();
-            printf("--f %s (%s) (", file_node.word1, file_node.word2);
-            print_file_hash(file_node);
-            printf(")\n");
-        }
+        process_node(file);
+    }
+}
+
+void process_node(FILE *file) {
+    NODE_TYPE next_type = read_next_node_type(file);
+    if(next_type == DIR_NODE) {
+        print_tabs();
+        dir_node dir_node = read_next_dir_node(file);
+        printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, two_char_to_int(dir_node.number_of_nodes));
+        current_layer++;
+        traverse_directory(dir_node, file);
+        current_layer--;
+    } else {
+        file_node file_node = read_next_file_node(file);
+        print_tabs();
+        printf("--f %s (%s) (", file_node.word1, file_node.word2);
+        print_file_hash(file_node);
+        printf(")\n");
     }
 }
 
 int main(int argc, char *argv[]) {
 
     if(argc < 2) {
-        unsigned  char test[2] = {0x01, 0x62};
-        printf("%d", two_char_to_int(test));
-
         printf("Usage : %s {file_path}\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -182,21 +185,7 @@ int main(int argc, char *argv[]) {
     printf("Number of nodes in root : %d\n", two_char_to_int(header.number_of_nodes));
 
     for(int i = 0; i < two_char_to_int(header.number_of_nodes); i++) {
-        NODE_TYPE next_type = read_next_node_type(file);
-        if(next_type == DIR_NODE) {
-            dir_node dir_node = read_next_dir_node(file);
-            print_tabs();
-            printf("--d %s (%s) (%d)\n", dir_node.word1, dir_node.word2, two_char_to_int(dir_node.number_of_nodes));
-            current_layer++;
-            traverse_directory(dir_node, file);
-            current_layer--;
-        } else {
-            file_node file_node = read_next_file_node(file);
-            print_tabs();
-            printf("--f %s (%s) (", file_node.word1, file_node.word2);
-            print_file_hash(file_node);
-            printf(")\n");
-        }
+        process_node(file);
     }
 
     fclose(file);
